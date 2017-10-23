@@ -28,6 +28,7 @@ ExportedObj/
 *.sln.docstates
 *.userprefs
 /.vs/
+/.vscode/
 
 # Unity3D generated meta files
 *.pidb.meta
