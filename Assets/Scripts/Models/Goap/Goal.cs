@@ -1,11 +1,12 @@
 using System.Collections.Generic;
+using System;
 
 /// <summary>
 /// this class represents a task of some specialization
 /// they're meant to be Agent-bound, 1 goal for 1 agent at a time
 /// and so low-level  
 /// </summary>
-public abstract class Goal
+public class Goal
 {
     HashSet<KeyValuePair<string,object>> goalWorldProperties;
     int priority;
@@ -24,6 +25,7 @@ public abstract class Goal
         this.specialization = specialization;
     }
     
-    public abstract void onCompletion(GoalController gc);
+    // goap agent calls when
+    public void OnCompletion(Action callback){}
     
 }

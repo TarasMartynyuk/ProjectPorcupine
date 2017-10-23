@@ -62,6 +62,8 @@ public class WorldController : MonoBehaviour
 
     public DialogBoxManager DialogBoxManager { get; private set; }
 
+    public GoapController GoapController { get; private set; }
+    
     // The world and tile data.
     public World World { get; protected set; }
 

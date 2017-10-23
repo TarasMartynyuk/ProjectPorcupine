@@ -12,16 +12,19 @@ using ProjectPorcupine.Entities;
 /// </summary>
 public sealed class GoapAgent  
 {
-	private Action<Character> state;
-	private static readonly Action<Character> idleState; // finds something to do
-	private static readonly Action<Character> moveToState; // moves to a target
-	private static readonly Action<Character> performActionState; // performs an action
+	// this delegates use instance info, but are still static 
+	// and we pass instances as parameters to them
+	// because, there is no need to create functions in runtime with static we create Action objects only once
+	private Action<GoapAgent> state;
+	private static readonly Action<GoapAgent> idleState; // finds something to do
+	private static readonly Action<GoapAgent> moveToState; // moves to a target
+	private static readonly Action<GoapAgent> performActionState; // performs an action
 
 	private Goal currGoal;
 	private GoapPlanner planner;
 	
-	private HashSet<Action> actions;
-	private Queue<Action> plannedActions;
+	private HashSet<GoapAction> actions;
+	private Queue<GoapAction> plannedActions;
 	
 	private WorldStateSupplier dataProvider; 
 	private Character character;
@@ -29,16 +32,16 @@ public sealed class GoapAgent
 #region Constructors
 	GoapAgent(Character character)
 	{
-		actions = new HashSet<Action> ();
-		plannedActions = new Queue<Action> ();
-		planner = new GoapPlanner ();
+		actions = new HashSet<GoapAction>();
+		plannedActions = new Queue<GoapAction>();
+		planner = new GoapPlanner();
 		this.character = character;
 		// loadActions ();
 	}
 
 	static GoapAgent()
 	{
-		createIdleState();
+		idleState = getIdleState();
 		createMoveToState();
 		createPerformActionState();
 	}
@@ -46,33 +49,42 @@ public sealed class GoapAgent
 	
 	// call in characters Update method
 	// Note: this class is not Monobehavior!
-	void Update () { state(character); }
+	void Update () { state(this); }
 
 #region Actions
-    public HashSet<Action> GetActions(){return null;}
+    public HashSet<GoapAction> GetActions(){return null;}
 
-    public void AddAction(Action a) {
+    public void AddAction(GoapAction a) {
 		actions.Add (a);
 	}
 
-	public void RemoveAction(Action action) {
+	public void RemoveAction(GoapAction action) {
 		actions.Remove (action);
 	}
 #endregion
 #region Static state creation
 	// checks if there are actions to do, if so performs them, else
 	// asks GoalController for new goal and plan for it
-	private static Action<Character> getIdleState() 
+	private static Action<GoapAgent> getIdleState() 
     {
-		return (character) => {
-			//
-			// get the goal we want to plan for
-			currGoal = GoalController.GetNextGoalFor(this);
+		return (agent) => {
+			// check if currentGoal is still not achieved
+			if(agent.HasActionsToDo())
+				agent.GetReadyToDoAction(agent.plannedActions.Peek());    // pick next action an perform it
+			
+			// if it is, delete it from GoapController so that garbage collector will destroy the object
+			if(agent.currGoal != null)
+				WorldController.Instance.GoapController.UnregisterGoal(agent.currGoal);
+			// and get the new goal
+			agent.currGoal = WorldController.Instance.GoapController.GetNextGoalFor(agent);
 
 			// Plan
-			Queue<Action> plan = planner.plan(this, currGoal);
+			Queue<GoapAction> plan = agent.planner.Plan(agent, agent.currGoal);
 			if (plan != null) 
-				plannedActions = plan;
+			{
+				agent.plannedActions = plan;
+				agent.GetReadyToDoAction(agent.plannedActions.Peek());
+			}
 			else
 			{
 				//TODO: callback to GoalController and find next suitable goal 
@@ -87,12 +99,12 @@ public sealed class GoapAgent
 	
 	// while in this state character will move to the target specified in his current Action
 	// e.g stockpile, or furniture placement spot
-	private static void createMoveToState() 
+	private static Action<GoapAgent> createMoveToState() 
 	{
-		moveToState = (fsm, character) => {
+		return (agent) => {
 			// move the game object
-			Action action = plannedActions.Peek();
-			if (action.requiresInRange() && action.target == null) 
+			Action action = agent.plannedActions.Peek();
+			if (action.RequiresInRange() && action.target == null) 
 			{
 				Debug.Log("<color=red>Fatal error:</color> Action requires a target but has none. Planning failed." + 
 							"You did not assign the target in your Action.checkProceduralPrecondition()");
@@ -102,15 +114,15 @@ public sealed class GoapAgent
 
 			// get the agent to move itself
 			
-			if ( character.moveTo(/* target of action*/ ) 
-				state
+			// if ( character.moveTo(/* target of action*/ ) 
+				// state
 		};
 	}
 	
 	// performs action, this state is active if we already are in the needed place
-	private static void createPerformActionState() 
+	private static Action<GoapAgent> createPerformActionState() 
 	{
-		performActionState = (fsm, character) => {
+		return (agent) => {
 			if (hasActionPlan() == false) // no actions to perform
 			{
 				Debug.Log("<color=red>Done actions</color>");
@@ -159,10 +171,10 @@ public sealed class GoapAgent
 #endregion
 
     private bool HasActionsToDo() { return plannedActions.Count > 0; }
-	private void GetReadyToDoAction(Action actionToDo) 
+	private void GetReadyToDoAction(GoapAction actionToDo) 
 	{
 		// check if need to move
-		bool alreadyInRange = actionToDo.requiresInRange() ? actionToDo.isInRange() : true;
+		bool alreadyInRange = actionToDo.RequiresInRange() ? actionToDo.IsInRange() : true;
 		state = alreadyInRange ? performActionState : moveToState;
 	}
 
