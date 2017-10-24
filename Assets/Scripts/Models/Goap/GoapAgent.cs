@@ -103,12 +103,12 @@ public sealed class GoapAgent
 	{
 		return (agent) => {
 			// move the game object
-			Action action = agent.plannedActions.Peek();
-			if (action.RequiresInRange() && action.target == null) 
+			GoapAction action = agent.plannedActions.Peek();
+			if (action.RequiresInRange() && action.Target == null) 
 			{
 				Debug.Log("<color=red>Fatal error:</color> Action requires a target but has none. Planning failed." + 
 							"You did not assign the target in your Action.checkProceduralPrecondition()");
-				state = idleState; 
+				agent.state = idleState; 
 				return;
 			}
 
@@ -123,49 +123,23 @@ public sealed class GoapAgent
 	private static Action<GoapAgent> createPerformActionState() 
 	{
 		return (agent) => {
-			if (hasActionPlan() == false) // no actions to perform
+			// if (agent.HasActionsToDo() == false) // no actions to perform
+			// {
+			// 	Debug.Log("<color=red>Done actions</color>");
+			// 	a
+			// 	dataProvider.actionsFinished();
+			// 	return;
+			// }
+
+			GoapAction action = agent.plannedActions.Peek();
+			// perform next action and ,if it is finished this frame,
+			// throw it away and change state to idle 
+			if (action.Perform(agent.character) == false) 
 			{
-				Debug.Log("<color=red>Done actions</color>");
-				fsm.popState();
-				fsm.pushState(idleState);
-				dataProvider.actionsFinished();
-				return;
+				// action failed, we need to plan again
+				agent.state = idleState;
+				agent.plannedActions.Dequeue();
 			}
-
-			Action action = plannedActions.Peek();
-			if ( action.isDone() ) 
-				plannedActions.Dequeue(); // the action is done. Remove it so we can perform the next one
-
-			if (hasActionPlan()) // perform the next action
-			{
-				action = plannedActions.Peek();
-				bool inRange = action.requiresInRange() ? action.isInRange() : true;
-
-				if ( inRange ) 
-				{
-					// we are in range, so perform the action
-					bool success = action.perform(gameObj);
-
-					if (success == false) 
-					{
-						// action failed, we need to plan again
-						fsm.popState();
-						fsm.pushState(idleState);
-						dataProvider.planAborted(action);
-					}
-				} 
-				else 
-					fsm.pushState(moveToState); // we need to move there first
-
-			} 
-			else 
-			{
-				// no actions left, move to Plan state
-				fsm.popState();
-				fsm.pushState(idleState);
-				dataProvider.actionsFinished();
-			}
-
 		};
 	}
 #endregion

@@ -1,4 +1,5 @@
 using UnityEngine;
+using ProjectPorcupine.Entities;
 public abstract class GoapAction
 {
     // this can vary depending on world state
@@ -7,9 +8,11 @@ public abstract class GoapAction
     // -1 means that it has not been computed yet
     protected int cost = -1;
     protected GameObject target;
-    public abstract bool RequiresInRange();
-    public abstract bool IsInRange();
+    // protected bool isDone;
     
+    public GameObject Target {get; protected set; }
+    // public bool IsDone {get; protected set; }
+
     /// <summary>
     /// subclasses that have static cost should just return it
     /// subclasses that have state-dependent cost should compute it if it is not computed yet(-1)
@@ -18,10 +21,14 @@ public abstract class GoapAction
     /// <param name="recompute"></param>
     /// <returns></returns>
     public abstract int GetCost(bool recompute);
-
-    // force recomputing of cost
-    // subclasses that have static cost should just do nothing
-   
+    public abstract bool RequiresInRange();
+    public abstract bool IsInRange();
     
-        
+    /// <summary>
+    /// performs action during this frame
+    /// returns true if action is done after, 
+    /// else false
+    /// </summary>
+    /// <returns></returns>
+    public abstract bool Perform(Character character);
 }

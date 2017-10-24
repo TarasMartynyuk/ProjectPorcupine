@@ -5,7 +5,6 @@ using System.Collections.Generic;
 /// </summary>
 public class WorldStateSupplier
 {
-    IAgent bound
     HashSet<KeyValuePair<string, bool>> getWorldState(){ return null; }
     // Dictionary<string, bool> getWorldState(IEnumerable<string> propertyNames){ return null; }
 }
